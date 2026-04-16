@@ -26,6 +26,7 @@ params = struct(...
     'RT_BladeFlapInertia_P', 2500, ...
     'RT_Cl_alpha_P', 5.7, ...
     'RT_Chord_P', 0.53, ...
+    'RT_InertiaLead_P',3000);
     'RT_FlapInertia_P', 2000);
 
 fNames = fieldnames(params);
@@ -62,6 +63,6 @@ end
 
 % 5. Lưu và Đóng an toàn
 saveChanges(ddObj);
-close(ddObj);
+Simulink.data.dictionary.closeAll();
 
 fprintf('--- Hoàn tất cập nhật SLDD ---\n');
