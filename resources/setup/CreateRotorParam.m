@@ -1,15 +1,26 @@
-%% Script thao tác với SLDD: Tạo, Cập nhật và Đóng
-slddName = 'Rotor.sldd';
+%% Script cập nhật SLDD (Xử lý file đã tồn tại)
+slddPath = 'D:\Viettel\Simulation\TestGit\resources\params\Rotor.sldd';
 
-% 1. Tạo mới hoặc Mở SLDD
-% Nếu file đã tồn tại, nó sẽ mở ra. Nếu chưa, nó sẽ tạo mới.
-ddObj = Simulink.data.dictionary.create(slddName);
+% 1. Dọn dẹp bộ nhớ trước khi chạy
+Simulink.data.dictionary.closeAll();
 
-% 2. Truy cập vào phần 'Design Data' (nơi chứa các tham số mô phỏng)
+% 2. Mở hoặc Tạo mới (create tự động mở nếu file đã tồn tại)
+if exist(slddPath, 'file')
+    ddObj = Simulink.data.dictionary.open(slddPath);
+    fprintf('Đang mở file hiện có: %s\n', slddPath);
+else
+    % Tự tạo thư mục nếu chưa có
+    [parentDir, ~, ~] = fileparts(slddPath);
+    if ~exist(parentDir, 'dir'), mkdir(parentDir); end
+    
+    ddObj = Simulink.data.dictionary.create(slddPath);
+    fprintf('Đã tạo file mới tại: %s\n', slddPath);
+end
+
+% 3. Truy cập Design Data
 dSection = getSection(ddObj, 'Design Data');
 
-% 3. Định nghĩa và Cập nhật các Params
-% Danh sách các tham số cần thêm/cập nhật
+% 4. Danh sách tham số cập nhật
 params = struct(...
     'RT_RotorRadius_P', 7.82, ...
     'RT_BladeFlapInertia_P', 2500, ...
@@ -22,28 +33,34 @@ for i = 1:length(fNames)
     pName = fNames{i};
     pVal = params.(pName);
     
-    % Kiểm tra xem tham số đã tồn tại trong SLDD chưa
-    entryObj = getEntry(dSection, pName);
+    % Kiểm tra sự tồn tại của Entry trước khi lấy để tránh lỗi "not present"
+    entryObj = find(dSection, 'Name', pName);
     
     if isempty(entryObj)
-        % Nếu chưa có thì tạo mới (dưới dạng đối tượng Simulink.Parameter)
+        % THÊM MỚI nếu chưa có
         newParam = Simulink.Parameter;
         newParam.Value = pVal;
-        newParam.DataType = 'single'; % Hoặc 'double' tùy ông
+        newParam.DataType = 'single'; 
         addEntry(dSection, pName, newParam);
-        fprintf('Đã thêm mới: %s\n', pName);
+        fprintf('  [NEW] %s\n', pName);
     else
-        % Nếu đã có thì cập nhật giá trị
-        tempParam = getValue(entryObj);
-        tempParam.Value = pVal;
-        setValue(entryObj, tempParam);
-        fprintf('Đã cập nhật: %s\n', pName);
+        % CẬP NHẬT nếu đã có
+        targetEntry = getEntry(dSection, pName);
+        tempVal = getValue(targetEntry);
+        
+        if isa(tempVal, 'Simulink.Parameter')
+            tempVal.Value = pVal;
+        else
+            tempVal = pVal;
+        end
+        
+        setValue(targetEntry, tempVal);
+        fprintf('  [UPDATED] %s\n', pName);
     end
 end
 
-% 4. Lưu thay đổi và Đóng
+% 5. Lưu và Đóng an toàn
 saveChanges(ddObj);
-discardChanges(ddObj); % Giải phóng bộ nhớ (không làm mất dữ liệu đã save)
 close(ddObj);
 
-fprintf('--- Hoàn tất thao tác với %s ---\n', slddName);
+fprintf('--- Hoàn tất cập nhật SLDD ---\n');
