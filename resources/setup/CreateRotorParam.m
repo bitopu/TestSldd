@@ -62,6 +62,6 @@ end
 
 % 5. Lưu và Đóng an toàn
 saveChanges(ddObj);
-close(ddObj);
+Simulink.data.dictionary.closeAll();
 
 fprintf('--- Hoàn tất cập nhật SLDD ---\n');
